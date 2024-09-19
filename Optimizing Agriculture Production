@@ -1,0 +1,349 @@
+#for Manipulations 
+import numpy as np 
+import pandas as pd 
+
+#for data visulizations 
+import matplotlib.pyplot as plt 
+import seaborn as sns 
+import sklearn
+
+#for interactivity 
+from ipywidgets import interact 
+from matplotlib import pyplot as plt
+
+#file Upload or read
+data = pd.read_csv('data.csv')
+
+#your data Show Here use data code 
+data
+
+#Shape of Dataset
+print("Shape of the Dataset : ", data.shape)
+
+#head of dataset
+data.head()
+
+data.isnull().sum()
+
+
+data['label'].value_counts()
+
+print("Average Ratio of Nitrogen in the Soil: {0:.2f}".format(data['N'].mean()))
+print("Average Ratio of Phosphorous in the soil: {0:.2f}".format(data['P'].mean()))
+print("Average Ratio of Potassium in the soil: {0:.2f}".format(data['K'].mean()))
+print("Average Tempature in Celsius: {0:.2f}".format(data['temperature'].mean()))
+print("Average Relative Humidity in %: {0:.2f}".format(data['humidity'].mean()))
+print("Average PH Value of the soil: {0:.2f}".format(data['ph'].mean()))
+print("Average Rainfall in mm: {0:.2f}".format(data['rainfall'].mean()))
+
+
+
+#Ratio of Crop Chart
+plt.rcParams['figure.figsize'] = (15, 7)
+plt.subplot(2, 4, 1)
+sns.histplot(data['N'],  color="lightgrey")
+plt.xlabel('Ratio of Nitrogen' , fontsize = 12)
+plt.grid()
+plt.subplot(2, 4, 2)
+sns.histplot(data['P'],  color="skyblue")
+plt.xlabel('Ratio of Phosphorous' , fontsize = 12)
+plt.grid()
+plt.subplot(2, 4, 3)
+sns.histplot(data['K'],  color="darkblue")
+plt.xlabel('Ratio of Potassium' , fontsize = 12)
+plt.grid()
+plt.subplot(2, 4, 4)
+sns.histplot(data['temperature'],  color="lightgrey")
+plt.xlabel('Ratio of Tempature' , fontsize = 12)
+plt.grid()
+plt.subplot(2, 4, 5)
+sns.histplot(data['humidity'],  color="darkgreen")
+plt.xlabel('Ratio of Humidity' , fontsize = 12)
+plt.grid()
+plt.subplot(2, 4, 6)
+sns.histplot(data['ph'],  color="lightgreen")
+plt.xlabel('Ratio of PH' , fontsize = 12)
+plt.grid()
+plt.subplot(2, 4, 7)
+sns.histplot(data['rainfall'],  color="skyblue")
+plt.xlabel('Ratio of Rainfall' , fontsize = 12)
+plt.grid()
+
+
+
+print(data.columns)
+print("Some Interesting Patterns")
+print("-------------------------")
+print("Crops which require very high Ratio of Nitrogen Conetent in the Soil :", data[data['N'] > 120]['label'].unique())
+print("Crops which require very high Ratio of Phosphorus Conetent in the Soil :", data[data['P'] > 100]['label'].unique())
+print("Crops which require very high Ratio of Potassium Conetent in the Soil :", data[data['K'] > 200]['label'].unique())
+print("Crops which require very high Rainfall  :", data[data['rainfall'] > 200 ]['label'].unique())
+print("Crops which require very low Temperature  :", data[data['temperature'] < 10 ]['label'].unique())
+print("Crops which require very high Temperature :", data[data['temperature'] > 40]['label'].unique())
+print("Crops which require very high Ratio of Temperature :", data[data['temperature'] > 40]['label'].unique())
+print("Crops which require very low Humidity:", data[data['humidity'] < 20]['label'].unique())
+print("Crops which require very low Ph:", data[data['ph'] < 4]['label'].unique())
+print("Crops which require very high Ph:", data[data['ph'] > 9]['label'].unique())
+
+
+print("Summer Crops: ")
+print(data[(data['temperature'] > 30) & (data['humidity'] > 50 )]['label'].unique())      
+print("Winter Crops: ")
+print(data[(data['temperature'] < 20 ) & (data['humidity'] > 30 )]['label'].unique())    
+print("Rainy Crops: ")
+print(data[(data['rainfall'] > 200) & (data['humidity'] > 30 )]['label'].unique())    
+
+
+#lets try to cluster these crops
+# lets import warning library to that we can avoid warnings 
+from sklearn.cluster import KMeans 
+import warnings 
+warnings.filterwarnings('ignore')
+x=data.loc[:, ['N','P','K','temperature','ph','humidity','rainfall']].values
+print(x.shape)
+x_data = pd.DataFrame(x)
+x_data.head()
+#lets implement the K Means algorithm to perform Clustering analysis
+km =KMeans(n_clusters = 4, init = 'k-means++', max_iter= 300, n_init= 10, random_state = 0) 
+y_means = km.fit_predict(x)
+#lets find out the Results
+a= data['label']
+y_means = pd.DataFrame(y_means) 
+z= pd.concat([y_means, a], axis =1) 
+z=z.rename(columns = {0: 'cluster'})
+#Lets check the Clusters of each Crops
+print("Lets check the Results After Applying the K Means Clustering Analysis \n")
+print("Crops in First Cluster:", z[z['cluster'] == 0] ['label'].unique())
+print("--------------------------------------------------------------")
+print("Crops in Second Cluster:", z[z['cluster'] == 1]['label'].unique()) 
+print("---------------------------------------------------------------")
+print("Crops in Third Cluster:", z[z['cluster'] == 2]['label'].unique()) 
+print ("......-------------------------------------------------------")
+print("Crops in Forth Cluster:", z[z['cluster'] == 3] ['label'].unique())
+
+
+
+#Lets detrmine the optimum number of clusters within the dataset 
+plt.rcParams['figure.figsize']=(10,4)
+wcss = []
+for i in range (1,11):
+    from sklearn.cluster import KMeans
+    km=KMeans(n_clusters=i,init='k-means++',max_iter=300, n_init=10, random_state=0)
+    km.fit(x)
+    wcss.append(km.inertia_)
+#lets plot the results 
+plt.plot(range(1,11),wcss)
+plt.title('The Elbow Method ', fontsize=20)
+plt.xlabel('No. of Clusters ')
+plt.ylabel('wcss')
+plt.show()
+
+
+#Lets Split the Dataset for predicitve Modeling 
+y=data['label']
+x=data.drop(['label'], axis=1)
+print("Shape of x:", x.shape)
+print("Shape of y:", y.shape)
+
+
+#lets create training and testing Sets for Validation of Results 
+from sklearn.model_selection import train_test_split
+x_train , x_test, y_train, y_test=train_test_split(x,y,test_size=0.2, random_state=0)
+print("Shape of x_train:", x_train.shape)
+print("Shape of x_test:", x_test.shape)
+print("Shape of y_train:", y_train.shape)
+print("Shape of y_test:", y_test.shape)
+
+
+#lets evaluate the model performance 
+from sklearn.metrics import  classification_report
+#lets print the classification report also 
+cr=classification_report (y_test,y_pred)
+print(cr)
+
+
+data.head()
+
+
+prediction = model.predict((np.array([[90,
+                                       40,
+                                       40,
+                                       20,
+                                       80,
+                                       7,
+                                       200]]))) 
+print("the suggested crop for Given Climatic Condtion is :", prediction)
+
+
+
+data[data['label']=='orange'].head()
+
+
+prediction = model.predict((np.array([[20,
+                                       30,
+                                       10,
+                                       15,
+                                       90,
+                                       7.5,
+                                       100]]))) 
+print("the suggested crop for Given Climatic Condtion is :", prediction)
+
+
+
+#lets Create a predictive model 
+from sklearn.linear_model import LogisticRegression 
+model = LogisticRegression(solver='saga')
+model.fit(x_train,y_train)
+y_pred = model.predict(x_test)
+
+
+data = pd.DataFrame({
+    'label': ['Corn', 'Wheat', 'Soybean', 'Corn', 'Wheat','Soybean'],
+    'N': [150, 120, 100, 130, 110, 90]
+})
+
+
+#print dataframe here
+print(data.head())
+
+
+
+
+import numpy as np
+import pandas as pd
+# Function to calculate maximum nitrogen requirement
+def calculate_nitrogen(crop_yield, nitrogen_rate):
+    """
+    Calculate maximum nitrogen requirement for a given crop yield.
+    Parameters:
+    - crop_yield: Expected yield of the crop in kg/ha
+    - nitrogen_rate: Recommended nitrogen application rate in kg of N per ton of yield
+    Returns:
+    - Maximum nitrogen required in kg/ha
+    """
+    nitrogen_required = (crop_yield / 1000) * nitrogen_rate  # Convert yield to tons
+    return nitrogen_required
+# Example parameters
+crops = {
+    'Wheat': {'yield': 3000, 'nitrogen_rate': 150},  # yield in kg/ha, rate in kg/t
+    'Corn': {'yield': 6000, 'nitrogen_rate': 200},
+    'Rice': {'yield': 4500, 'nitrogen_rate': 120}
+}
+# DataFrame to store results
+results = []
+# Calculate nitrogen requirements for each crop
+for crop, params in crops.items():
+    nitrogen_required = calculate_nitrogen(params['yield'], params['nitrogen_rate'])
+    results.append({'Crop': crop, 'Nitrogen Required (kg/ha)': nitrogen_required})
+ #Convert results to DataFrame
+results_df = pd.DataFrame(results)
+# Display the results
+print(results_df)
+
+
+
+
+# Define a dictionary of crops and their preferred seasons
+crops_season = {
+    'Rainy Season': ['Rice', 'Maize', 'Sorghum'],
+    'Winter Season': ['Wheat', 'Barley', 'Mustard'],
+    'Summer Season': ['Cotton', 'Groundnut', 'Soybean']
+}
+# Function to get crops by season
+def get_crops_by_season(season):
+    """
+    Returns the list of crops suitable for a given season.
+    Parameters:
+    - season: The season for which to retrieve crops
+    Returns:
+    - List of crops suitable for the given season
+    """
+    return crops_season.get(season, "No crops found for this season.")
+# Example usage
+seasons = ['Rainy Season', 'Winter Season', 'Summer Season']
+results = {season: get_crops_by_season(season) for season in seasons}
+# Display the results
+import pandas as pd
+results_df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in results.items()]))
+print(results_df)
+
+
+
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Define a dictionary of crops and their market demand ratings
+crops_demand = {
+    'Rice': 90,
+    'Wheat': 85,
+    'Corn': 80,
+    'Soybean': 75,
+    'Potato': 70,
+    'Tomato': 95,
+    'Broccoli': 60,
+    'Strawberry': 88,
+    'Quinoa': 65,
+    'Saffron': 95
+}
+
+# Function to get high-demand crops
+def get_high_demand_crops(demand, threshold):
+    high_demand_crops = {crop: rating for crop, rating in demand.items() if rating >= threshold}
+    return high_demand_crops
+# Define a demand threshold
+demand_threshold = 80  # Adjust this value as needed
+# Get high-demand crops
+high_demand_crops = get_high_demand_crops(crops_demand, demand_threshold)
+# Create a DataFrame for visualization
+high_demand_df = pd.DataFrame(high_demand_crops.items(), columns=['Crop', 'Demand Rating'])
+# Plotting a pie chart
+plt.figure(figsize=(8, 8))
+plt.pie(high_demand_df['Demand Rating'], labels=high_demand_df['Crop'], autopct='%1.1f%%', startangle=140)
+plt.title('High Demand Crops in the Market')
+plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+# Show the plot
+plt.show()
+
+
+
+import pandas as pd
+# Define a dictionary of crops with their selling prices and production costs
+crops_data = {
+    'Rice': {'selling_price': 0.5, 'cost': 0.3},      # Prices in your local currency per kg
+    'Wheat': {'selling_price': 0.4, 'cost': 0.25},
+    'Corn': {'selling_price': 0.6, 'cost': 0.4},
+    'Soybean': {'selling_price': 0.8, 'cost': 0.5},
+    'Potato': {'selling_price': 0.3, 'cost': 0.2},
+    'Tomato': {'selling_price': 0.9, 'cost': 0.6},
+    'Strawberry': {'selling_price': 2.0, 'cost': 1.0},
+    'Quinoa': {'selling_price': 1.5, 'cost': 0.8},
+    'Saffron': {'selling_price': 10.0, 'cost': 5.0},
+    'Almonds': {'selling_price': 3.0, 'cost': 1.5}
+}
+# Function to calculate profit for each crop
+def calculate_profit(crops):
+    profit_data = {}
+    for crop, data in crops.items():
+        profit = data['selling_price'] - data['cost']
+        profit_data[crop] = profit
+    return profit_data
+# Calculate profits
+profits = calculate_profit(crops_data)
+# Create a DataFrame for better visualization
+profit_df = pd.DataFrame(profits.items(), columns=['Crop', 'Profit per kg'])
+profit_df = profit_df.sort_values(by='Profit per kg', ascending=False)
+# Display the results
+print(profit_df)
+# Optional: Visualize the profits using a bar chart
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 6))
+plt.bar(profit_df['Crop'], profit_df['Profit per kg'], color='lightgreen')
+plt.title('Profit per kg of Crops for Direct Sales')
+plt.xlabel('Crops')
+plt.ylabel('Profit per kg')
+plt.xticks(rotation=45)
+plt.grid(axis='y')
+plt.tight_layout()
+plt.show()
+
